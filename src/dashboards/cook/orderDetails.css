@@ -1,0 +1,143 @@
+.order-details {
+  max-width: 600px;
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  font-family: sans-serif;
+}
+
+.details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.order-meta {
+  margin: 20px 0;
+}
+
+.meta-item {
+  margin-bottom: 10px;
+  display: flex;
+  gap: 10px;
+}
+
+.status {
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: capitalize;
+}
+
+.status.pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status.preparing {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.status.ready {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.order-items {
+  margin: 20px 0;
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f9f9f9;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.item-info {
+  flex: 1;
+}
+
+.item-name {
+  font-weight: bold;
+  display: block;
+}
+
+.item-notes {
+  font-size: 0.85em;
+  color: #666;
+  display: block;
+  margin-top: 4px;
+}
+
+.item-quantity,
+.item-price {
+  margin-left: 20px;
+  min-width: 60px;
+  text-align: right;
+}
+
+.order-total {
+  margin: 20px 0;
+  font-size: 1.1em;
+  text-align: right;
+}
+
+.special-instructions {
+  margin: 20px 0;
+  background: #fffbea;
+  padding: 10px;
+  border-left: 4px solid #ffe58f;
+  border-radius: 6px;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn.primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn.success {
+  background-color: #28a745;
+  color: white;
+}
+
+.ready-status {
+  color: green;
+  font-weight: bold;
+  font-size: 1em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
