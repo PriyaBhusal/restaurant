@@ -1,23 +1,28 @@
 import React, { useState } from "react";
 import "./admin.css";
 
+const authHeaders = () => ({
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${localStorage.getItem("token")}`,
+});
+
 export function UsersSection({ users, setUsers, showModal }) {
   const [editingUserId, setEditingUserId] = useState(null);
-  const [userEdits, setUserEdits] = useState({ 
-    name: "", 
-    email: "", 
-    role: "Waiter", 
-    password: "" 
+  const [userEdits, setUserEdits] = useState({
+    name: "",
+    email: "",
+    role: "Waiter",
+    password: ""
   });
   const [showPassword, setShowPassword] = useState(false);
 
   const handleEditUser = (user) => {
     setEditingUserId(user.id);
-    setUserEdits({ 
-      name: user.name, 
-      email: user.email, 
-      role: user.role, 
-      password: "" 
+    setUserEdits({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      password: ""
     });
   };
 
@@ -28,25 +33,28 @@ export function UsersSection({ users, setUsers, showModal }) {
         return;
       }
 
-      await fetch(`http://localhost:5000/user/users/${id}/details`, {
+      // Update name & email
+      await fetch(`http://localhost:5000/api/user/users/${id}/details`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({
           name: userEdits.name,
           email: userEdits.email,
         }),
       });
 
-      await fetch(`http://localhost:5000/user/users/${id}/role`, {
+      // Update role
+      await fetch(`http://localhost:5000/api/user/users/${id}/role`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ role: userEdits.role }),
       });
 
+      // Update password if provided
       if (userEdits.password) {
-        const res = await fetch(`http://localhost:5000/user/users/${id}/reset-password`, {
+        const res = await fetch(`http://localhost:5000/api/user/users/${id}/reset-password`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders(),
           body: JSON.stringify({ password: userEdits.password }),
         });
 
@@ -57,9 +65,15 @@ export function UsersSection({ users, setUsers, showModal }) {
         }
       }
 
-      const updatedUsersResponse = await fetch("http://localhost:5000/user/users");
-      const updatedUsers = await updatedUsersResponse.json();
-      setUsers(updatedUsers);
+      // Update UI instantly
+      setUsers(prev =>
+        prev.map(u =>
+          u.id === id
+            ? { ...u, name: userEdits.name, email: userEdits.email, role: userEdits.role }
+            : u
+        )
+      );
+
       setEditingUserId(null);
       showModal("User updated successfully");
     } catch (error) {
@@ -69,16 +83,21 @@ export function UsersSection({ users, setUsers, showModal }) {
 
   const handleDeleteUser = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/user/users/${id}`, { 
-        method: "DELETE" 
+      const response = await fetch(`http://localhost:5000/api/user/users/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
       });
-      
-      if (response.ok) {
-        setUsers(users.filter(u => u.id !== id));
-        showModal("User deleted successfully");
-      } else {
-        showModal("Failed to delete user");
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        showModal(result?.error || "Failed to delete user");
+        return;
       }
+
+      // Remove from UI
+      setUsers(prev => prev.filter(u => u.id !== id));
+      showModal("User deleted successfully");
     } catch (error) {
       showModal("Error deleting user");
     }
@@ -88,9 +107,7 @@ export function UsersSection({ users, setUsers, showModal }) {
     <div className="section">
       <div className="section-header">
         <h1 className="section-title">Manage Users</h1>
-        <div className="badge">
-          {users.length} users
-        </div>
+        <div className="badge">{users.length} users</div>
       </div>
 
       <div className="users-list">
@@ -111,9 +128,9 @@ export function UsersSection({ users, setUsers, showModal }) {
                     onChange={(e) => setUserEdits({ ...userEdits, email: e.target.value })}
                     placeholder="Email"
                   />
-                  <select 
+                  <select
                     className="input select"
-                    value={userEdits.role} 
+                    value={userEdits.role}
                     onChange={(e) => setUserEdits({ ...userEdits, role: e.target.value })}
                   >
                     {["Waiter", "Cook", "Admin"].map(r => (
@@ -136,14 +153,14 @@ export function UsersSection({ users, setUsers, showModal }) {
                     </span>
                   </div>
                   <div className="button-group">
-                    <button 
-                      className="btn btn-primary btn-sm" 
+                    <button
+                      className="btn btn-primary btn-sm"
                       onClick={() => handleSaveUser(user.id)}
                     >
                       Save
                     </button>
-                    <button 
-                      className="btn btn-secondary btn-sm" 
+                    <button
+                      className="btn btn-secondary btn-sm"
                       onClick={() => setEditingUserId(null)}
                     >
                       Cancel
@@ -158,14 +175,14 @@ export function UsersSection({ users, setUsers, showModal }) {
                     <div className="user-role-badge">{user.role}</div>
                   </div>
                   <div className="button-group">
-                    <button 
-                      className="btn btn-secondary btn-sm" 
+                    <button
+                      className="btn btn-secondary btn-sm"
                       onClick={() => handleEditUser(user)}
                     >
                       Edit
                     </button>
-                    <button 
-                      className="btn btn-danger btn-sm" 
+                    <button
+                      className="btn btn-danger btn-sm"
                       onClick={() => handleDeleteUser(user.id)}
                     >
                       Delete

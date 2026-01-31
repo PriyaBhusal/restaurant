@@ -45,7 +45,7 @@ const Home = () => {
     setIsSubmitting(true);
 
     try {
-      const url = `http://localhost:5000/user/api/auth/${isLogin ? "login" : "register"}`;
+      const url = `http://localhost:5000/api/auth/${isLogin ? "login" : "register"}`;
       const payload = isLogin
         ? { email: formData.email, password: formData.password }
         : formData;

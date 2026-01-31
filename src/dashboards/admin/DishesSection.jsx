@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import "./admin.css";
 
+const authHeaders = () => ({
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${localStorage.getItem("token")}`,
+});
+
 export function DishesSection({ dishes, setDishes, showModal }) {
   const [newDish, setNewDish] = useState({ item: "", price: "", category: "", description: "" });
   const [editingDishId, setEditingDishId] = useState(null);
@@ -18,24 +23,26 @@ export function DishesSection({ dishes, setDishes, showModal }) {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/menu/menus", {
+      const response = await fetch("http://localhost:5000/api/menu/menus", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ item, price, category, description }),
       });
 
-      if (response.ok) {
-        const dish = await response.json();
-        setDishes([...dishes, dish]);
-        setNewDish({ item: "", price: "", category: "", description: "" });
-        showModal("Dish added successfully");
-      } else {
-        const errorText = await response.text();
-        console.error("Backend returned error:", errorText);
-        showModal(`Failed to add dish: ${response.status}`);
+      if (!response.ok) {
+        const error = await response.json();
+        showModal(error?.error || "Failed to add dish");
+        return;
       }
+
+      const dish = await response.json();
+
+      // Update UI safely
+      setDishes(prev => [...prev, dish]);
+
+      setNewDish({ item: "", price: "", category: "", description: "" });
+      showModal("Dish added successfully");
     } catch (error) {
-      console.error("Network error:", error);
       showModal("Error adding dish");
     }
   };
@@ -59,9 +66,9 @@ export function DishesSection({ dishes, setDishes, showModal }) {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/menu/menus/${id}`, {
+      const response = await fetch(`http://localhost:5000/api/menu/menus/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({
           item: item.trim(),
           price: parseFloat(price),
@@ -70,14 +77,18 @@ export function DishesSection({ dishes, setDishes, showModal }) {
         }),
       });
 
-      if (response.ok) {
-        const updated = await response.json();
-        setDishes(dishes.map((d) => (d.id === id ? updated : d)));
-        setEditingDishId(null);
-        showModal("Dish updated successfully");
-      } else {
+      if (!response.ok) {
         showModal("Failed to update dish");
+        return;
       }
+
+      const updated = await response.json();
+
+      // Safe UI update
+      setDishes(prev => prev.map(d => (d.id === id ? updated : d)));
+
+      setEditingDishId(null);
+      showModal("Dish updated successfully");
     } catch (error) {
       showModal("Error updating dish");
     }
@@ -85,16 +96,20 @@ export function DishesSection({ dishes, setDishes, showModal }) {
 
   const handleDeleteDish = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/menu/menus/${id}`, {
+      const response = await fetch(`http://localhost:5000/api/menu/menus/${id}`, {
         method: "DELETE",
+        headers: authHeaders(),
       });
 
-      if (response.ok) {
-        setDishes(dishes.filter((d) => d.id !== id));
-        showModal("Dish deleted successfully");
-      } else {
+      if (!response.ok) {
         showModal("Failed to delete dish");
+        return;
       }
+
+      // Safe UI update
+      setDishes(prev => prev.filter(d => d.id !== id));
+
+      showModal("Dish deleted successfully");
     } catch (error) {
       showModal("Error deleting dish");
     }

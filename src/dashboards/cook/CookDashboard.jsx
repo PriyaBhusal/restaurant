@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import OrderCard from './OrderCard';
 import OrderDetails from './OrderDetails';
 import { updateOrderStatusAPI } from './StatusUpdateHelper';
-import { Flame } from 'lucide-react';
 import './cook.css';
+import { useNavigate } from 'react-router-dom';
 
 const CookDashboard = () => {
   const [orders, setOrders] = useState([]);
@@ -11,6 +11,7 @@ const CookDashboard = () => {
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState(null);
+  const navigate = useNavigate();
 
   const showNotification = (message, type = 'info') => {
     setNotification({ message, type });
@@ -19,25 +20,30 @@ const CookDashboard = () => {
 
   useEffect(() => {
     fetchOrders();
-
-    const interval = setInterval(fetchOrders, 5000); // ⏱ Poll every 5 seconds
+    const interval = setInterval(fetchOrders, 5000);
     return () => clearInterval(interval);
   }, [filter]);
 
   const fetchOrders = async () => {
     try {
-      const endpoint = filter === 'pending'
-        ? 'http://localhost:5000/order/orders?status=pending'
-        : 'http://localhost:5000/order/orders';
+      const token = localStorage.getItem("cookToken");
+      if (!token) throw new Error("Not authenticated. Please login.");
 
-      const response = await fetch(endpoint);
+      const endpoint =
+        filter === 'pending'
+          ? 'http://localhost:5000/order/orders?status=pending'
+          : 'http://localhost:5000/order/orders';
+
+      const response = await fetch(endpoint, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await response.json();
 
       const parsedOrders = data.map(order => ({
         ...order,
         items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
         order_time: order.createdAt || order.created_at,
-        created_at: order.createdAt || order.created_at
+        created_at: order.createdAt || order.created_at,
       }));
 
       setOrders(parsedOrders);
@@ -51,69 +57,53 @@ const CookDashboard = () => {
 
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
-      await updateOrderStatusAPI(orderId, newStatus);
+      const updatedOrder = await updateOrderStatusAPI(orderId, newStatus);
 
       setOrders(prevOrders =>
-        prevOrders.map(order =>
-          order.id === orderId ? { ...order, status: newStatus } : order
-        )
+        prevOrders.map(order => order.id === orderId ? updatedOrder : order)
       );
 
-      if (selectedOrder && selectedOrder.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status: newStatus });
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder(updatedOrder);
       }
 
       showNotification(`Order #${orderId} status updated to ${newStatus}`, 'success');
     } catch (error) {
-      console.error('Error updating order status:', error);
-      showNotification(`Failed to update order status: ${error.message}`, 'error');
+      console.error(error);
+      showNotification(`Failed to update status: ${error.message}`, 'error');
     }
   };
 
-  const markInPreparation = async (orderId) => {
-    await updateOrderStatus(orderId, 'preparing');
+  const handleLogout = () => {
+    localStorage.removeItem('cookToken');
+    sessionStorage.clear();
+    showNotification('Logging out...', 'info');
+    setTimeout(() => navigate('/login'), 800);
   };
 
-  const filteredOrders = orders.filter(order => {
-    if (filter === 'all') return true;
-    return order.status === filter;
-  });
+  const filteredOrders = orders.filter(order => filter === 'all' || order.status === filter);
 
-  const getOrderCounts = () => {
-    return {
-      pending: orders.filter(o => o.status === 'pending').length,
-      preparing: orders.filter(o => o.status === 'preparing').length,
-      ready: orders.filter(o => o.status === 'ready').length,
-    };
+  const counts = {
+    pending: orders.filter(o => o.status === 'pending').length,
+    preparing: orders.filter(o => o.status === 'preparing').length,
+    ready: orders.filter(o => o.status === 'ready').length,
   };
-
-  const counts = getOrderCounts();
 
   if (loading) return <div className="loading">Loading orders...</div>;
 
   return (
     <div className="cook-dashboard">
-      {notification && (
-        <div className={`notification ${notification.type}`}>
-          {notification.message}
-        </div>
-      )}
+      {notification && <div className={`notification ${notification.type}`}>{notification.message}</div>}
 
       <header className="dashboard-header">
         <h1>Cook Dashboard</h1>
-        <div className="status-summary">
-          <div className="status-item pending">
-            <span className="count">{counts.pending}</span>
-            <span className="label">Pending</span>
+        <div className="header-right">
+          <div className="status-summary">
+            <div className="status-item pending"><span className="count">{counts.pending}</span><span>Pending</span></div>
+            <div className="status-item preparing"><span className="count">{counts.preparing}</span><span>Preparing</span></div>
+            <div className="status-item ready"><span className="count">{counts.ready}</span><span>Ready</span></div>
           </div>
-          <div className="status-item preparing">
-            <span className="count">{counts.preparing}</span>
-            <span className="label">Preparing</span>
-          </div>
-          <div className="status-item ready">
-            <span className="count">{counts.ready}</span>
-            <span className="label">Ready</span>
-          </div>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
       </header>
 
@@ -121,11 +111,7 @@ const CookDashboard = () => {
         <div className="orders-section">
           <div className="filter-tabs">
             {['all', 'pending', 'preparing', 'ready'].map(status => (
-              <button
-                key={status}
-                className={filter === status ? 'active' : ''}
-                onClick={() => setFilter(status)}
-              >
+              <button key={status} className={filter === status ? 'active' : ''} onClick={() => setFilter(status)}>
                 {status.charAt(0).toUpperCase() + status.slice(1)}
               </button>
             ))}
@@ -141,16 +127,8 @@ const CookDashboard = () => {
                     order={order}
                     onSelect={() => setSelectedOrder(order)}
                     onStatusUpdate={updateOrderStatus}
-                    isSelected={selectedOrder && selectedOrder.id === order.id}
+                    isSelected={selectedOrder?.id === order.id}
                   />
-                  {/* {order.status === 'pending' && (
-                    <button
-                      className="start-preparing-btn"
-                      onClick={() => markInPreparation(order.id)}
-                    >
-                      <Flame size={16} /> Start Preparing
-                    </button>
-                  )} */}
                 </div>
               ))
             )}
